@@ -402,7 +402,7 @@ reports/training_loss.png
 ### 1. Clone the repository
 
 ```bash
-git clone git clone https://github.com/luckynnmn/breast-mass-logistic-regression
+git clone https://github.com/luckynnmn/breast-mass-logistic-regression
 cd breast-mass-logistic-regression
 ```
 
