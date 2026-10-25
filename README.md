@@ -354,7 +354,7 @@ with the required packages listed inside it.
 ### 1. Clone the repository
 
 ```powershell
-git clone <https://github.com/luckynnmn/breast-mass-logistic-regression>
+git clone https://github.com/luckynnmn/breast-mass-logistic-regression
 ```
 
 ### 2. Create a virtual environment
@@ -402,7 +402,7 @@ reports/training_loss.png
 ### 1. Clone the repository
 
 ```bash
-git clone <REPOSITORY_URL>
+git clone git clone https://github.com/luckynnmn/breast-mass-logistic-regression
 cd breast-mass-logistic-regression
 ```
 
