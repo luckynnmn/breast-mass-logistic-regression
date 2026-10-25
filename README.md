@@ -365,9 +365,7 @@ In Visual Studio > click "Terminal" > click "New Terminal"
 cd breast-mass-logistic-regression
 py -m venv logistic
 ```
-```
 logistic (name of venv, can customize on your own)
-```
 ### 3. Activate the virtual environment
 
 ```Visual Studio 
@@ -413,6 +411,7 @@ cd breast-mass-logistic-regression
 ```bash
 python3 -m venv logistic
 ```
+logistic (name of venv, can customize on your own)
 
 ### 3. Activate the virtual environment
 
