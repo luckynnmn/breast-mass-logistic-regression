@@ -1,0 +1,33 @@
+# Virtual environments
+logistic/
+venv/
+env/
+ENV/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Secrets / credentials
+.env
+.env.*
+*.key
+*.pem
+secrets.*
+credentials.*
+
+# Peer-validation form (keep private, submit to Canvas only)
+*peer*verification*
+*Peer*Verification*
+*Replication*Verification*
+*replication*verification*
+*signed*
+*.pdf.signed
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
