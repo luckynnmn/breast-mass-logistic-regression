@@ -1,516 +1,160 @@
 # Breast Mass Classification with Logistic Regression
 Written by: Lucky (Nhi) Nguyen
-## Project Overview
+**Educational use only.** This is a class project for MSBA265 at the University of the Pacific. The model uses only two features and a small, historical dataset. It is **not** a diagnostic tool and it does not give advice about any patient.
+ 
+Full report: **[memo.md](memo.md)**
 
-This project investigates binary classification of breast masses using logistic regression. The analysis uses two features from the Wisconsin Diagnostic Breast Cancer dataset:
-
-- `mean radius`
-- `mean texture`
-
-The target is coded as:
-
-- `0` = benign (negative)
-- `1` = malignant (positive)
-
-The project implements logistic regression in NumPy using full-batch gradient descent and compares the result with a scikit-learn reference implementation. It also evaluates a majority-class baseline and investigates how different classification thresholds affect precision, recall, F1 score, and false-positive/false-negative (FN/FP)trade-offs.
-
-This project is for educational purposes only. It is not a clinical diagnostic system and should not be used to make medical decisions.
-
+## 1. Project overview
+ 
+**Question.** Can two cell measurements (`mean radius` and `mean texture`) predict if a breast-mass sample is malignant or benign? And what happens to the mistakes (false positives and false negatives) when we change the threshold?
+ 
+**Data.** The Wisconsin Diagnostic Breast Cancer dataset, loaded with `sklearn.datasets.load_breast_cancer()`. It comes with scikit-learn, so there is **nothing to download**. The data is from the UCI Machine Learning Repository (Wolberg, Street, and Mangasarian). It has 569 rows.
+ 
+**Positive class.** I recoded the target so that **1 = malignant (positive)** and **0 = benign (negative)**.
+ 
+**What I compared.**
+ 
+1. A logistic regression that I wrote with NumPy (gradient descent, mean binary cross-entropy).
+2. A scikit-learn LogisticRegression (reference).
+3. A majority baseline (DummyClassifier).
+**Main findings** (details in the memo):
+ 
+- My NumPy model and scikit-learn give the same coefficients (to 6 decimals).
+- The baseline has a test accuracy of 0.6316, but it finds 0 malignant samples.
+- The threshold chosen on validation was 0.60. On the test set, it had fewer false positives (3 vs 4) but more false negatives (14 vs 11), so recall and F1 went down.
+**Limitations.** Only two features, a small dataset, no external validation, and I did not check calibration. See the memo, section 6.
+ 
 ---
-
-## Repository Structure
-
-```text
-breast-mass-logistic-regression/
-│
-├── logistic_regression.py
-├── memo.md
-├── README.md
-├── requirements.txt
-├── .gitignore
-│
-└── reports/
-    ├── threshold_results.csv
-    ├── assignment_results.csv
-    └── training_loss.png
-```
-
-The .venv directory used locally is a Python virtual environment. So it will not be committed to the repository.
-
+ 
+## 2. What you need before you start
+ 
+| Software | Link | Note |
+|----------|------|------|
+| Python 3.10 or newer | https://www.python.org/downloads/ | On Windows, check **"Add Python to PATH"** in the installer. |
+| Git | https://git-scm.com/downloads | Used to download (clone) this project. |
+ 
+**Check that they are installed.** Open a terminal (see below) and type these commands.
+ 
+- Windows PowerShell: `python --version` and `git --version`
+- macOS Terminal: `python3 --version` and `git --version`
+You should see a version number such as `Python 3.12.x`. If you see an error, go to the Troubleshooting section.
+ 
+**How to open a terminal**
+ 
+- **Windows:** Press the Windows key, type `PowerShell`, and press Enter.
+- **macOS:** Press Command + Space, type `Terminal`, and press Enter.
 ---
-
-## Dataset
-
-The project uses the Wisconsin Diagnostic Breast Cancer dataset provided by scikit-learn through:
-
-```python
-from sklearn.datasets import load_breast_cancer
+ 
+## 3. Download the project
+ 
+The link for this project is:
+ 
 ```
-
-The dataset contains 569 observations. Only the following two features are used:
-
-```text
-mean radius
-mean texture
+https://github.com/luckynnmn/breast-mass-logistic-regression
 ```
-
-The original target labels are recoded so that:
-
-```text
-0 = benign
-1 = malignant
+ 
+Run these commands (same on Windows and macOS):
+ 
 ```
-
-The overall class counts are:
-
-```text
-Benign:     357
-Malignant:  212
+git clone https://github.com/luckynnmn/breast-mass-logistic-regression
+cd breast-mass-logistic-regression
 ```
-
-There are no missing values in both 2 selected feature.
-
+ 
+The second line moves you into the project folder. If you cloned into a different folder name, use that name after `cd`. The folder should contain `logistic_regression.py`, `requirements.txt`, and `README.md`. You can check with `dir` (Windows) or `ls` (macOS).
+ 
+All commands below must be run **from this project folder**.
+ 
 ---
-
-## Experimental Design
-
-The data are split using row indices in two stages.
-
-First, 20% of the observations are held out as the test set. The remaining 80% form the training set.
-
-The training set is then split into:
-
-- 75% training (60%/80% of the observations)
-- 25% validation (20%/80% of the observations)
-
-The resulting sizes are:
-
-| Split | Rows |
-|---|---:|
-| Training | 341 |
-| Validation | 114 |
-| Test | 114 |
-
-Both splits use stratification and:
-
-```text
-random_state = 42
+ 
+## 4. Set up and run
+ 
+### Windows (PowerShell) or Open 'Visual Studio Code' > Click 'Terminal' > Click 'New Terminal'
+ 
+```powershell/Terminal
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python logistic_regression.py
 ```
-
-The three index sets are checked to ensure that they are disjoint and together cover all 569 observations.
-
-### Feature Scaling
-
-`StandardScaler` is fitted **only on the training data**.
-
-The same fitted scaler is then used to transform:
-
-- training data
-- validation data
-- test data
-
-This prevents information from the validation or test sets from leaking into the training procedure.
-
----
-
-## Models
-
-### 1. NumPy Logistic Regression
-
-The main model is implemented from scratch using NumPy.
-
-The model uses:
-
-- full-batch gradient descent
-- learning rate = `0.1`
-- epochs = `20,000`
-- zero initialization
-- no regularization
-- no class weights
-- a numerically stable sigmoid
-- numerically stable binary cross-entropy
-
-The loss is recorded before training and after every gradient update.
-
-The training loss decreased from:
-
-```text
-Initial loss: 0.693147
-Final loss:   0.246834
-```
-
-The resulting coefficients in standardized feature units are:
-
-| Coefficient | Value |
-|---|---:|
-| Intercept | -0.727172 |
-| Mean radius | 3.656794 |
-| Mean texture | 1.009872 |
-
-### 2. scikit-learn Reference Model
-
-A scikit-learn logistic regression model is used as a reference implementation with:
-
-```python
-LogisticRegression(
-    C=np.inf,
-    solver="lbfgs",
-    max_iter=10000,
-    tol=1e-9
-)
-```
-
-The scikit-learn model receives the two scaled features directly and fits its own intercept.
-
-The NumPy and scikit-learn coefficients match to six decimal places. The mean absolute difference between their validation probabilities is approximately:
-
-```text
-1.19 × 10^-10
-```
-
-This provides a check that the custom NumPy implementation converged to essentially the same solution as the reference implementation.
-
-### 3. Majority-Class Baseline
-
-A majority/prior baseline is also evaluated.
-
-The baseline predicts the majority class using the class distribution observed in the training data. It provides a simple reference point for determining whether the logistic regression model provides useful predictive performance beyond a trivial classifier.
-
----
-
-## Threshold Selection
-
-Logistic regression produces probabilities for class 1 (malignant). A classification threshold is then used to convert probabilities into predicted classes.
-
-The following thresholds are evaluated:
-
-```text
-0.20
-0.30
-0.40
-0.50
-0.60
-0.70
-0.80
-```
-
-The threshold is selected using **validation F1 score only**.
-
-The validation results identify:
-
-```text
-Selected threshold = 0.60
-Validation F1 = 0.8312
-```
-
-The selected threshold is then frozen and applied to the test set. The test set is not used to select or tune the threshold.
-
----
-
-## Test Results
-
-At the default threshold of `0.50`, the NumPy model achieves:
-
-| Metric | Test result |
-|---|---:|
-| Accuracy | 0.8684 |
-| Precision | 0.8857 |
-| Recall | 0.7381 |
-| F1 | 0.8052 |
-| Log loss | 0.2557 |
-
-The corresponding confusion matrix is:
-
-```text
-TN = 68
-FP = 4
-FN = 11
-TP = 31
-```
-
-At the selected threshold of `0.60`:
-
-| Metric | Test result |
-|---|---:|
-| Accuracy | 0.8509 |
-| Precision | 0.9032 |
-| Recall | 0.6667 |
-| F1 | 0.7671 |
-| Log loss | 0.2557 |
-
-The confusion matrix becomes:
-
-```text
-TN = 69
-FP = 3
-FN = 14
-TP = 28
-```
-
-The higher threshold reduces false positives from 4 to 3, but increases false negatives from 11 to 14. This illustrates the trade-off between precision and recall when the classification threshold changes.
-
-The selected threshold was chosen using validation data as required. It is not changed after observing the test results.
-
----
-
-## Baseline Comparison
-
-The majority baseline achieves approximately:
-
-```text
-Test accuracy = 0.6316
-```
-
-However, it predicts all test observations as benign. Therefore:
-
-```text
-TP = 0
-FN = 42
-Recall = 0
-F1 = 0
-```
-
-This demonstrates why accuracy alone is not sufficient for evaluating this classification problem. A model can obtain moderate accuracy by predicting the more common class while completely failing to identify malignant cases.
-
----
-
-## Output Files
-
-Running the Python script creates the following files inside `reports/`.
-
-### `threshold_results.csv`
-
-Contains the validation results for all seven candidate thresholds.
-
-The file includes:
-
-```text
-threshold
-tn
-fp
-fn
-tp
-accuracy
-precision
-recall
-f1
-```
-
-### `assignment_results.csv`
-
-Contains results for five model/policy configurations across validation and test splits:
-
-```text
-validation  baseline  default
-validation  numpy     default
-validation  numpy     selected
-validation  sklearn   default
-validation  sklearn   selected
-
-test        baseline  default
-test        numpy     default
-test        numpy     selected
-test        sklearn   default
-test        sklearn   selected
-```
-
-The file contains confusion-matrix counts and:
-
-- accuracy
-- precision
-- recall
-- F1
-- log loss
-
-### `training_loss.png`
-
-Shows the NumPy model's training loss over the gradient-descent epochs.
-
----
-
-# Installation and Running the Project
-
-## Requirements
-
-The project requires:
-
-- Python 3
-- NumPy
-- Matplotlib
-- scikit-learn
-
-The dependency file should be named:
-
-```text
-requirements.txt
-```
-
-with the required packages listed inside it.
-
----
-
-## Windows PowerShell
-
-### 1. Clone the repository
-
+ 
+**If activation is blocked** (error says "running scripts is disabled"), run this command and then try the activation line again. It only changes the current PowerShell window, not your computer permanently:
+ 
 ```powershell
-git clone https://github.com/luckynnmn/breast-mass-logistic-regression
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 ```
-
-### 2. Create a virtual environment
-
-In Visual Studio > click "Terminal" > click "New Terminal"
-
-```Visual Studio 
-cd breast-mass-logistic-regression
-py -m venv logistic
-```
-logistic (name of venv, can customize on your own)
-### 3. Activate the virtual environment
-
-```Visual Studio 
-.\logistic\Scripts\Activate.ps1
-```
-
-### 4. Install dependencies
-
-```Visual Studio 
-python -m pip install --upgrade pip
+ 
+When the environment is active, you see `(.venv)` at the start of the line.
+ 
+### macOS (Terminal)
+ 
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
 python -m pip install -r requirements.txt
-```
-
-### 5. Run the analysis
-
-```
 python logistic_regression.py
 ```
-
-The script should print the Part 1 calculations, data preparation checks, model training results, coefficient comparison, threshold selection results, and evaluation metrics.
-
-It will also generate:
-
-```text
-reports/threshold_results.csv
-reports/assignment_results.csv
-reports/training_loss.png
-```
-
+ 
+### Run details
+ 
+- **Script name:** `logistic_regression.py`
+- **Working directory:** the project folder (the one that contains the script)
+- **Training settings:** learning rate = 0.1, epochs = 20000, as suggested in the assignment (no changes)
+- **Dataset:** loaded from scikit-learn, no separate download needed
+- The script saves outputs next to itself, so it also works if you run it from another folder (for example `python path/to/logistic_regression.py`). The `reports` folder is created automatically.
 ---
-
-## macOS / Linux Terminal
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/luckynnmn/breast-mass-logistic-regression
-cd breast-mass-logistic-regression
-```
-
-### 2. Create a virtual environment
-
-```bash
-python3 -m venv logistic
-```
-logistic (name of venv, can customize on your own)
-
-### 3. Activate the virtual environment
-
-```bash
-source logistic/bin/activate
-```
-
-### 4. Install dependencies
-
-```bash
-python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
-```
-
-### 5. Run the analysis
-
-```bash
-python logistic_regression.py
-```
-
-The generated files will appear in:
-
-```text
-reports/
-```
-
+ 
+## 5. What a successful run looks like
+ 
+- **Run time:** about 6 seconds on my test run.
+- The terminal prints these parts in order: Part 1 (four cases), Part 2 (data preparation), Part 3 (NumPy training), Part 4 (scikit-learn and baseline), Part 5 (thresholds and the final table).
+- Key numbers you should see:
+  - Case A: `z = 0.60`, `p = 0.6457`, predicted class 1
+  - Class counts: benign = 357, malignant = 212
+  - Initial training loss `0.693147`, final training loss `0.246834`
+  - Coefficients (standardized units): intercept `-0.727172`, mean radius `3.656794`, mean texture `1.009872`
+  - Selected threshold: `0.6`
+- The script may print a `UserWarning` from scikit-learn about `penalty=None` and `C`. This is expected because the assignment asks for `C=np.inf`. It is not an error.
+**Output files** (in the `reports` folder inside the project):
+ 
+| File | What it is |
+|------|-----------|
+| `reports/threshold_results.csv` | 7 validation rows, one for each threshold |
+| `reports/assignment_results.csv` | 10 rows: 5 configurations for validation and for test |
+| `reports/training_loss.png` | NumPy training loss vs. epoch |
+ 
+To open them: double-click the files, or on Windows run `start reports\training_loss.png`, and on macOS run `open reports/training_loss.png`. CSV files open in Excel or any text editor.
+ 
+**Small differences.** The splits use `random_state=42`, so counts should be exactly the same. The metrics could differ in the last decimal places if you have different package versions. The CSV files keep 8 decimal places.
+ 
 ---
-
-## Reproducibility
-
-The experiment uses fixed random seeds and prescribed model settings so that the results can be reproduced.
-
-The main reproducibility settings are:
-
-```text
-random_state = 42
-learning_rate = 0.1
-epochs = 20000
-thresholds = 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80
-```
-
-The threshold is selected from validation F1 and then frozen before test evaluation.
-
-The scaler is fitted only on the training partition.
-
+ 
+## 6. Troubleshooting
+ 
+| Problem | What to try |
+|---------|-------------|
+| `python` is not recognized (Windows) | Python is not installed or not in PATH. Reinstall it and check "Add Python to PATH", then open a new PowerShell window. You can also try `py --version`. |
+| `python: command not found` (macOS) | Use `python3` before you activate the environment. After activation, `python` works. |
+| `ModuleNotFoundError: No module named 'numpy'` (or sklearn, matplotlib) | The packages are not installed, or the environment is not active. Activate the environment, then run `python -m pip install -r requirements.txt` again. |
+| `can't open file ... logistic_regression.py` | You are in the wrong folder. Use `cd` to go into the project folder, then check with `dir` / `ls`. |
+| PowerShell blocks `Activate.ps1` | See the "If activation is blocked" step in section 4. |
+| `git` is not recognized | Install Git from the link in section 2, then open a new terminal. |
+ 
 ---
-
-## Interpreting the Results
-
-The logistic regression coefficient for `mean radius` is positive:
-
-```text
-3.656794
-```
-
-Because the features are standardized, this means that, holding `mean texture` constant, a one training-standard-deviation increase in mean radius is associated with an increase of approximately 3.657 in the model's log-odds of malignancy.
-
-This coefficient should not be interpreted as a constant increase in probability or as a causal effect.
-
-The threshold results also show that a higher classification threshold can increase precision while reducing recall. In this experiment, moving from 0.50 to the validation-selected threshold of 0.60 reduced test false positives but increased test false negatives.
-
+ 
+## 7. Files in this repository
+ 
+| File | Description |
+|------|-------------|
+| `logistic_regression.py` | The full script (Parts 1 to 6) |
+| `requirements.txt` | Packages needed |
+| `reports/` | The two CSV files and the loss plot |
+| `memo.md` | The written report, tables, and research process |
+| `.gitignore` | Files that Git should ignore |
+ 
 ---
-
-## Limitations and Scope
-
-This project is an educational investigation rather than a clinical prediction system.
-
-Important limitations include:
-
-- Only two features are used
-- The dataset is relatively small and historical;
-- External validation is not performed;
-- Clinical calibration is not established;
-- The threshold was selected using an assignment-defined F1 criterion rather than a clinical cost function.
-
-In a medical classification setting, false negatives (FN) can be particularly consequential because a malignant case classified as benign could delay appropriate follow-up.
-
-Therefore, the model should not be used for clinical diagnosis or treatment decisions.
-
----
-
-## Source Acknowledgement
-
-The dataset is the Wisconsin Diagnostic Breast Cancer dataset bundled with scikit-learn and accessed through:
-
-```python
-sklearn.datasets.load_breast_cancer()
-```
-
-The dataset's `DESCR` information was used as the source context for the dataset description.
-
-NumPy was used for the custom logistic-regression training implementation. Scikit-learn was used for dataset loading, train/validation/test splitting, feature scaling, the reference logistic-regression model, the baseline, and evaluation metrics.
-
-The project also documents the experimental process, including leakage prevention, comparison with the reference implementation, threshold selection, and evaluation.
-
----
-
-## Academic Integrity and Code Reuse
-
-The custom logistic-regression training procedure is implemented using NumPy. Standard library/model utilities from NumPy and scikit-learn are used where appropriate for data loading, splitting, scaling, reference comparison, and evaluation.
-
-Any code reused or adapted from earlier coursework should be acknowledged in the project submission according to the course requirements.
+ 
+## 8. Sources
+ 
+- Wisconsin Diagnostic Breast Cancer dataset, from scikit-learn (`load_breast_cancer`, see DESCR) and the UCI Machine Learning Repository.
+- scikit-learn and NumPy documentation.
+- MSBA265 Project Assignment 2 instructions_by Shyla Solis
