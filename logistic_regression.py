@@ -241,3 +241,20 @@ with open(REPORT_DIR / "assignment_results.csv", "w", newline="") as f:
 
 print("\nSaved threshold_results.csv, assignment_results.csv, and "
       "training_loss.png to:", REPORT_DIR)
+
+#=================================Final check====================================
+print("\n=== Final self-check ===")
+checks = {
+    "Case A probability is 0.6457": round(float(sigmoid(0.6)), 4) == 0.6457,
+    "Loss list has epochs + 1 = 20001 values": len(losses) == 20001,
+    "Training loss went down": losses[-1] < losses[0],
+    "NumPy and sklearn coefficients match (6 decimals)": np.allclose(beta, beta_sk, atol=1e-6),
+    "Validation probabilities are close (mean diff < 1e-6)":
+        np.mean(np.abs(P["validation"]["numpy"] - P["validation"]["sklearn"])) < 1e-6,
+    "Threshold results has 7 rows": len(thr_rows) == 7,
+    "Assignment results has 10 rows": len(rows) == 10,
+    "Selected threshold is one of the 7 candidates": selected in thresholds,
+}
+for label, ok in checks.items():
+    print(f"  {'PASS' if ok else 'FAIL'}: {label}")
+print("ALL CHECKS PASSED" if all(checks.values()) else "SOME CHECKS FAILED - look above")
